@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Rondas e Vistorias - Tempo Real</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #121214;
+            --card-bg: #1a1a1e;
+            --border-color: #29292e;
+            --text-main: #e1e1e6;
+            --text-muted: #a8a8b3;
+            --accent-ok: #00b37e;
+            --accent-warning: #fba94c;
+            --accent-danger: #f75a68;
+            --accent-primary: #00875f;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar-custom {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 20px;
+        }
+
+        .dashboard-container {
+            padding: 30px 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .kpi-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+        }
+
+        .kpi-ok::before { background-color: var(--accent-ok); }
+        .kpi-warning::before { background-color: var(--accent-warning); }
+        .kpi-danger::before { background-color: var(--accent-danger); }
+        .kpi-primary::before { background-color: var(--accent-primary); }
+
+        .kpi-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+
+        .kpi-icon {
+            position: absolute;
+            right: 20px;
+            top: 25px;
+            font-size: 2rem;
+            opacity: 0.15;
+        }
+
+        .dashboard-section {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 22px;
+            margin-bottom: 25px;
+            height: 100%;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .custom-table {
+            color: var(--text-main);
+            margin-bottom: 0;
+        }
+
+        .custom-table th {
+            background-color: rgba(255, 255, 255, 0.03) !important;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color) !important;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            padding: 12px;
+        }
+
+        .custom-table td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px;
+            vertical-align: middle;
+            font-size: 0.9rem;
+            background-color: transparent !important;
+            color: var(--text-main) !important;
+        }
+
+        .custom-table tbody tr:hover td {
+            background-color: rgba(255, 255, 255, 0.02) !important;
+        }
+
+        .badge-ok {
+            background-color: rgba(0, 179, 126, 0.15);
+            color: var(--accent-ok);
+            border: 1px solid rgba(0, 179, 126, 0.3);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .badge-attention {
+            background-color: rgba(251, 169, 76, 0.15);
+            color: var(--accent-warning);
+            border: 1px solid rgba(251, 169, 76, 0.3);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .badge-problem {
+            background-color: rgba(247, 90, 104, 0.15);
+            color: var(--accent-danger);
+            border: 1px solid rgba(247, 90, 104, 0.3);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .realtime-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--accent-ok);
+            background-color: rgba(0, 179, 126, 0.08);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 179, 126, 0.2);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-ok);
+            border-radius: 50%;
+            box-shadow: 0 0 0 0 rgba(0, 179, 126, 0.7);
+            animation: pulse 1.6s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 179, 126, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 179, 126, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 179, 126, 0); }
+        }
+
+        .filter-select {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+        .filter-select:focus {
+            background-color: var(--bg-dark);
+            border-color: var(--accent-primary);
+            color: var(--text-main);
+            box-shadow: none;
+        }
+
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 260px;
+            width: 100%;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #323238; }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-custom navbar-dark">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <a href="ronda.html" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-2"></i>Voltar ao App
+                </a>
+                <span class="navbar-brand mb-0 h1 fs-5 fw-bold text-white">📊 Dashboard de Operações Condomínio</span>
+            </div>
+            <div class="realtime-indicator">
+                <div class="pulse-dot"></div>
+                <span>Supabase Live Connected</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Principal -->
+    <div class="dashboard-container">
+        
+        <!-- Bloco de Filtros -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="dashboard-section p-3 mb-0">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-auto">
+                            <i class="fas fa-filter text-muted"></i> <span class="fw-semibold">Filtros Rápidos:</span>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="filtro-local" class="form-select filter-select" onchange="processarDadosFiltrados()">
+                                <option value="Todos">Todos os Locais / Torres</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="filtro-responsavel" class="form-select filter-select" onchange="processarDadosFiltrados()">
+                                <option value="Todos">Todos os Responsáveis</option>
+                            </select>
+                        </div>
+                        <div class="col text-end">
+                            <button class="btn btn-sm btn-outline-light" onclick="carregarDadosDoSupabase()">
+                                <i class="fas fa-sync-alt me-1"></i> Forçar Recarga
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cards de KPI -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="kpi-card kpi-primary">
+                    <div class="kpi-title">Total de Rondas</div>
+                    <div class="kpi-value" id="kpi-total-rondas">0</div>
+                    <div class="kpi-icon"><i class="fas fa-clipboard-list"></i></div>
+                    <div class="small text-muted" id="sub-kpi-itens">0 itens verificados</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="kpi-card kpi-ok">
+                    <div class="kpi-title">Itens Conformes (OK)</div>
+                    <div class="kpi-value text-success" id="kpi-itens-ok">0</div>
+                    <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="small text-muted" id="kpi-pct-conformidade">0% de conformidade</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="kpi-card kpi-warning">
+                    <div class="kpi-title">Itens em Atenção</div>
+                    <div class="kpi-value text-warning" id="kpi-itens-atencao">0</div>
+                    <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="small text-muted">Requerem monitoramento</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="kpi-card kpi-danger">
+                    <div class="kpi-title">Itens com Problema</div>
+                    <div class="kpi-value text-danger" id="kpi-itens-problema">0</div>
+                    <div class="kpi-icon"><i class="fas fa-times-circle"></i></div>
+                    <div class="small text-muted" id="kpi-problemas-ativos">0 pendências críticas</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Gráficos -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="dashboard-section">
+                    <div class="section-title"><i class="fas fa-chart-pie text-info"></i> Distribuição de Status</div>
+                    <div class="chart-container">
+                        <canvas id="chartStatusGeral"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="dashboard-section">
+                    <div class="section-title"><i class="fas fa-chart-bar text-warning"></i> Incidentes por Local / Torre</div>
+                    <div class="chart-container">
+                        <canvas id="chartProblemasPorLocal"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="dashboard-section">
+                    <div class="section-title"><i class="fas fa-bolt text-danger"></i> Top Itens Críticos Recorrentes</div>
+                    <div class="chart-container">
+                        <canvas id="chartTopProblemas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabelas Operacionais -->
+        <div class="row g-4">
+            <div class="col-xl-6 col-12">
+                <div class="dashboard-section">
+                    <div class="section-title d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-clock text-danger me-2"></i>Painel de Problemas Ativos & Envelhecimento (SLA)</span>
+                        <span class="badge bg-danger" id="badge-total-criticos">0</span>
+                    </div>
+                    <div class="table-responsive" style="max-height: 400px;">
+                        <table class="table custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Local / Torre</th>
+                                    <th>Item Analisado</th>
+                                    <th>Status</th>
+                                    <th>Tempo Decorrido</th>
+                                    <th>Obs / Detalhes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-problemas-ativos">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">Carregando dados operacionais...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-6 col-12">
+                <div class="dashboard-section">
+                    <div class="section-title d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-history text-primary me-2"></i>Histórico Cronológico de Vistorias Efetuadas</span>
+                        <span class="badge bg-secondary" id="badge-total-historico">0</span>
+                    </div>
+                    <div class="table-responsive" style="max-height: 400px;">
+                        <table class="table custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Data / Hora</th>
+                                    <th>Responsável</th>
+                                    <th>Status Geral da Vistoria</th>
+                                    <th>Ações Realizadas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-historico-rondas">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">Carregando histórico do banco...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Detalhes -->
+    <div class="modal fade" id="modalDetalhesItem" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="--bs-modal-bg: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color);">
+            <div class="modal-content">
+                <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                    <h5 class="modal-title fw-bold" id="modal-item-titulo">Detalhes da Ocorrência</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="text-muted small uppercase fw-bold d-block">Localização</label>
+                        <span id="modal-item-local" class="fs-6 fw-semibold"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small uppercase fw-bold d-block">Item Vistoriado</label>
+                        <span id="modal-item-nome" class="fs-6"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small uppercase fw-bold d-block">Status Informado</label>
+                        <div id="modal-item-status"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small uppercase fw-bold d-block">Data da Identificação</label>
+                        <span id="modal-item-data"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small uppercase fw-bold d-block">Observações Registradas</label>
+                        <p id="modal-item-obs" class="p-2 rounded" style="background-color: rgba(255,255,255,0.05); border: 1px solid var(--border-color); white-space: pre-wrap;"></p>
+                    </div>
+                    <div class="mb-2 text-center" id="container-foto-modal">
+                        <label class="text-muted small uppercase fw-bold d-start mb-2 text-start w-100">Registro Fotográfico Anexado</label>
+                        <img id="modal-item-foto" src="" class="img-fluid rounded border d-none" style="max-height: 250px; object-fit: contain; border-color: var(--border-color) !important;" alt="Foto do item">
+                        <div id="modal-foto-placeholder" class="py-4 text-muted bg-dark rounded border border-secondary border-dashed"><i class="fas fa-camera d-block mb-1 fs-3"></i> Nenhuma foto anexada a este item</div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar Painel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de Inicialização -->
+    <script>
+        // COLE AS SUAS CREDENCIAIS ENTRE AS ASPAS ABAIXO:
+        const SUPABASE_URL = "https://orhudsajuoknkfcqhgah.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yaHVkc2FqdW9rbmtmY3FoZ2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MjU0NTYsImV4cCI6MjA5NDIwMTQ1Nn0.85p-inG7Y2c_vf8tupyA4s3suv1Ba_s1GJ_2EDdP4YQ";
+
+        let supabaseInstance = null;
+        let cacheRondas = [];
+        let cacheItens = [];
+
+        let chartInstanceStatus = null;
+        let chartInstanceLocais = null;
+        let chartInstanceTopItens = null;
+        let modalDetalhes = null;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            modalDetalhes = new bootstrap.Modal(document.getElementById('modalDetalhesItem'));
+            
+            if (window.supabase) {
+                inicializarDashboard();
+            } else {
+                const script = document.createElement('script');
+                script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+                script.onload = inicializarDashboard;
+                document.head.appendChild(script);
+            }
+        });
+
+        function inicializarDashboard() {
+            if (!SUPABASE_URL || SUPABASE_URL.includes("AQUI") || !SUPABASE_KEY || SUPABASE_KEY.includes("AQUI")) {
+                alert("Por favor, abra o arquivo dashboard.html em um editor de texto e insira a sua URL e Chave Anon do Supabase nas linhas 314 e 315!");
+                return;
+            }
+            
+            supabaseInstance = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            carregarDadosDoSupabase();
+            ativarEscutaTempoReal();
+        }
+
+        async function carregarDadosDoSupabase() {
+            try {
+                const [rondasResponse, itensResponse] = await Promise.all([
+                    supabaseInstance.from('rondas').select('*').order('created_at', { ascending: false }),
+                    supabaseInstance.from('ronda_itens').select('*').order('created_at', { ascending: false })
+                ]);
+
+                if (rondasResponse.error) throw rondasResponse.error;
+                if (itensResponse.error) throw itensResponse.error;
+
+                cacheRondas = rondasResponse.data || [];
+                cacheItens = itensResponse.data || [];
+
+                popularFiltrosDinamicos();
+                processarDadosFiltrados();
+
+            } catch (err) {
+                console.error("Falha ao sincronizar dados com o Supabase:", err.message);
+            }
+        }
+
+        function ativarEscutaTempoReal() {
+            supabaseInstance
+                .channel('dashboard-realtime-channel')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'ronda_itens' }, (payload) => {
+                    carregarDadosDoSupabase();
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'rondas' }, (payload) => {
+                    carregarDadosDoSupabase();
+                })
+                .subscribe();
+        }
+
+        function popularFiltrosDinamicos() {
+            const selectLocal = document.getElementById('filtro-local');
+            const selectResp = document.getElementById('filtro-responsavel');
+            
+            const valorLocalAnterior = selectLocal.value;
+            const valorRespAnterior = selectResp.value;
+
+            const locaisUnicos = new Set();
+            const responsaveisUnicos = new Set();
+
+            cacheItens.forEach(item => { if(item.local) locaisUnicos.add(item.local); });
+            cacheRondas.forEach(r => { if(r.responsavel) responsaveisUnicos.add(r.responsavel); });
+
+            selectLocal.innerHTML = '<option value="Todos">Todos os Locais / Torres</option>';
+            Array.from(locaisUnicos).sort().forEach(loc => {
+                selectLocal.innerHTML += `<option value="${loc}">${loc}</option>`;
+            });
+
+            selectResp.innerHTML = '<option value="Todos">Todos os Responsáveis</option>';
+            Array.from(responsaveisUnicos).sort().forEach(resp => {
+                selectResp.innerHTML += `<option value="${resp}">${resp}</option>`;
+            });
+
+            if (Array.from(locaisUnicos).includes(valorLocalAnterior)) selectLocal.value = valorLocalAnterior;
+            if (Array.from(responsaveisUnicos).includes(valorRespAnterior)) selectResp.value = valorRespAnterior;
+        }
+
+        function processarDadosFiltrados() {
+            const filtroLocal = document.getElementById('filtro-local').value;
+            const filtroResp = document.getElementById('filtro-responsavel').value;
+
+            let rondasFiltradas = [...cacheRondas];
+            if (filtroResp !== "Todos") {
+                rondasFiltradas = rondasFiltradas.filter(r => r.responsavel === filtroResp);
+            }
+
+            const idsRondasValidas = new Set(rondasFiltradas.map(r => r.id));
+
+            let itensFiltrados = cacheItens.filter(item => {
+                if (filtroResp !== "Todos" && !idsRondasValidas.has(item.ronda_id)) return false;
+                if (filtroLocal !== "Todos" && item.local !== filtroLocal) return false;
+                return true;
+            });
+
+            atualizarCardsKPI(rondasFiltradas, itensFiltrados);
+            renderizarGraficoStatus(itensFiltrados);
+            renderizarGraficoLocais(itensFiltrados);
+            renderizarGraficoTopProblemas(itensFiltrados);
+            renderizarTabelaProblemasAtivos(itensFiltrados);
+            renderizarTabelaHistorico(rondasFiltradas, cacheItens);
+        }
+
+        function atualizarCardsKPI(rondas, itens) {
+            document.getElementById('kpi-total-rondas').innerText = rondas.length;
+            document.getElementById('sub-kpi-itens').innerText = `${itens.length} verificações estruturadas`;
+
+            let ok = 0, atencao = 0, problema = 0;
+            itens.forEach(it => {
+                const statusNormalizado = String(it.status).toUpperCase().trim();
+                if (statusNormalizado === 'OK' || statusNormalizado === 'CONFORME') ok++;
+                else if (statusNormalizado === 'ATENCAO' || statusNormalizado === 'ATENÇÃO') atencao++;
+                else if (statusNormalizado === 'PROBLEMA' || statusNormalizado === 'NÃO CONFORME') problema++;
+            });
+
+            document.getElementById('kpi-itens-ok').innerText = ok;
+            document.getElementById('kpi-itens-atencao').innerText = atencao;
+            document.getElementById('kpi-itens-problema').innerText = problema;
+            document.getElementById('kpi-problemas-ativos').innerText = `${problema} não conformidades ativas`;
+
+            const totalStatus = ok + atencao + problema;
+            const pct = totalStatus > 0 ? Math.round((ok / totalStatus) * 100) : 0;
+            document.getElementById('kpi-pct-conformidade').innerText = `${pct}% índice de conformidade`;
+        }
+
+        function renderizarGraficoStatus(itens) {
+            let ok = 0, atencao = 0, problema = 0;
+            itens.forEach(it => {
+                const statusNormalizado = String(it.status).toUpperCase().trim();
+                if (statusNormalizado === 'OK' || statusNormalizado === 'CONFORME') ok++;
+                else if (statusNormalizado === 'ATENCAO' || statusNormalizado === 'ATENÇÃO') atencao++;
+                else if (statusNormalizado === 'PROBLEMA' || statusNormalizado === 'NÃO CONFORME') problema++;
+            });
+
+            if (chartInstanceStatus) chartInstanceStatus.destroy();
+
+            const ctx = document.getElementById('chartStatusGeral').getContext('2d');
+            chartInstanceStatus = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['OK', 'Atenção', 'Problema'],
+                    datasets: [{
+                        data: [ok, atencao, problema],
+                        backgroundColor: ['#00b37e', '#fba94c', '#f75a68'],
+                        borderWidth: 2,
+                        borderColor: '#1a1a1e'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#a8a8b3', font: { size: 11 } } }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function renderizarGraficoLocais(itens) {
+            const contagemLocais = {};
+            itens.forEach(it => {
+                const st = String(it.status).toUpperCase().trim();
+                if (st.includes('PROB') || st.includes('ATENC')) {
+                    contagemLocais[it.local] = (contagemLocais[it.local] || 0) + 1;
+                }
+            });
+
+            const locaisOrdenados = Object.entries(contagemLocais)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            const labels = locaisOrdenados.map(el => el[0]);
+            const dataValues = locaisOrdenados.map(el => el[1]);
+
+            if (chartInstanceLocais) chartInstanceLocais.destroy();
+
+            const ctx = document.getElementById('chartProblemasPorLocal').getContext('2d');
+            chartInstanceLocais = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.length > 0 ? labels : ['Sem Incidentes'],
+                    datasets: [{
+                        label: 'Não Conformidades',
+                        data: dataValues.length > 0 ? dataValues : [0],
+                        backgroundColor: '#fba94c',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#a8a8b3' } },
+                        y: { grid: { color: '#29292e' }, ticks: { color: '#a8a8b3', stepSize: 1 } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderizarGraficoTopProblemas(itens) {
+            const contagemItens = {};
+            itens.forEach(it => {
+                const st = String(it.status).toUpperCase().trim();
+                if (st.includes('PROB')) {
+                    contagemItens[it.item] = (contagemItens[it.item] || 0) + 1;
+                }
+            });
+
+            const itensOrdenados = Object.entries(contagemItens)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+
+            const labels = itensOrdenados.map(el => el[0]);
+            const dataValues = itensOrdenados.map(el => el[1]);
+
+            if (chartInstanceTopItens) chartInstanceTopItens.destroy();
+
+            const ctx = document.getElementById('chartTopProblemas').getContext('2d');
+            chartInstanceTopItens = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels.length > 0 ? labels : ['Nenhum Item Crítico'],
+                    datasets: [{
+                        data: dataValues.length > 0 ? dataValues : [0],
+                        backgroundColor: '#f75a68',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: '#29292e' }, ticks: { color: '#a8a8b3', stepSize: 1 } },
+                        y: { grid: { display: false }, ticks: { color: '#a8a8b3' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderizarTabelaProblemasAtivos(itens) {
+            const tbody = document.getElementById('table-problemas-ativos');
+            const itensCriticos = itens.filter(it => {
+                const st = String(it.status).toUpperCase().trim();
+                return st.includes('PROB') || st.includes('ATENC');
+            });
+
+            document.getElementById('badge-total-criticos').innerText = itensCriticos.length;
+
+            if (itensCriticos.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-thumbs-up text-success d-block mb-1 fs-5"></i> Nenhum problema ativo encontrado!</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = "";
+            itensCriticos.forEach(it => {
+                const statusNormalizado = String(it.status).toUpperCase().trim();
+                let statusBadge = "";
+                if(statusNormalizado.includes('PROB')) {
+                    statusBadge = `<span class="badge-problem">PROBLEMA</span>`;
+                } else {
+                    statusBadge = `<span class="badge-attention">ATENÇÃO</span>`;
+                }
+
+                let tempoTexto = "N/A";
+                if(it.created_at) {
+                    const dataCriacao = new Date(it.created_at);
+                    const diferencaMs = new Date() - dataCriacao;
+                    const diferencaDias = Math.floor(diferencaMs / (1000 * 60 * 60 * 24));
+                    
+                    if(diferencaDias === 0) {
+                        const horas = Math.floor(diferencaMs / (1000 * 60 * 60));
+                        tempoTexto = horas <= 0 ? "Agora mesmo" : `Há ${horas} hora(s)`;
+                    } else {
+                        tempoTexto = `Há ${diferencaDias} dia(s)`;
+                    }
+                }
+
+                const obsLimitada = it.observacao ? (it.observacao.length > 35 ? it.observacao.substring(0, 35) + '...' : it.observacao) : 'Sem observações';
+
+                const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.onclick = () => abrirModalDetalhesItem(it.id);
+                tr.innerHTML = `
+                    <td class="fw-semibold">${it.local || 'Não Inf.'}</td>
+                    <td>${it.item || 'Item Genérico'}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-muted"><i class="far fa-clock me-1"></i> ${tempoTexto}</td>
+                    <td class="text-muted small" title="${it.observacao || ''}">${obsLimitada}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderizarTabelaHistorico(rondas, todosItens) {
+            const tbody = document.getElementById('table-historico-rondas');
+            document.getElementById('badge-total-historico').innerText = rondas.length;
+
+            if (rondas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4">Nenhuma vistoria arquivada no histórico.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = "";
+            rondas.slice(0, 30).forEach(r => {
+                const dataFormatada = r.created_at ? new Date(r.created_at).toLocaleString('pt-BR') : 'Data Indefinida';
+                
+                const itensDestaRonda = todosItens.filter(it => it.ronda_id === r.id);
+                let problemasDestaRonda = 0;
+                itensDestaRonda.forEach(it => {
+                    if(String(it.status).toUpperCase().trim().includes('PROB')) problemasDestaRonda++;
+                });
+
+                let statusGeralBadge = `<span class="badge bg-success text-white px-2 py-1" style="font-size:0.75rem;"><i class="fas fa-check-double me-1"></i> 100% OK</span>`;
+                if (problemasDestaRonda > 0) {
+                    statusGeralBadge = `<span class="badge bg-danger text-white px-2 py-1" style="font-size:0.75rem;"><i class="fas fa-exclamation-circle me-1"></i> ${problemasDestaRonda} Falha(s)</span>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-white-50">${dataFormatada}</td>
+                    <td><i class="far fa-user text-muted me-1 small"></i> <span class="fw-semibold">${r.responsavel || 'Operador'}</span></td>
+                    <td>${statusGeralBadge}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info py-0 px-2" style="font-size:0.8rem;" onclick="aplicarFiltroRondaRapido('${r.responsavel}')">
+                            Filtrar Operador
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function aplicarFiltroRondaRapido(responsavel) {
+            document.getElementById('filtro-responsavel').value = responsavel;
+            processarDadosFiltrados();
+        }
+
+        function abrirModalDetalhesItem(itemId) {
+            const item = cacheItens.find(it => it.id === itemId);
+            if(!item) return;
+
+            document.getElementById('modal-item-titulo').innerText = `Ocorrência #${item.id}`;
+            document.getElementById('modal-item-local').innerText = item.local || 'Não Informado';
+            document.getElementById('modal-item-nome').innerText = item.item || 'Item Genérico';
+            document.getElementById('modal-item-data').innerText = item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : 'Sem data';
+            document.getElementById('modal-item-obs').innerText = item.observacao || 'Nenhuma observação informada na ronda.';
+
+            const statusContainer = document.getElementById('modal-item-status');
+            const statusNormalizado = String(item.status).toUpperCase().trim();
+            if(statusNormalizado.includes('PROB')) {
+                statusContainer.innerHTML = `<span class="badge-problem">PROBLEMA CRÍTICO</span>`;
+            } else if(statusNormalizado.includes('ATENC')) {
+                statusContainer.innerHTML = `<span class="badge-attention">REQUER ATENÇÃO</span>`;
+            } else {
+                statusContainer.innerHTML = `<span class="badge-ok">CONFORME (OK)</span>`;
+            }
+
+            const imgElement = document.getElementById('modal-item-foto');
+            const placeholderElement = document.getElementById('modal-foto-placeholder');
+
+            if(item.foto && item.foto.trim() !== "" && item.foto !== "null") {
+                imgElement.src = item.foto;
+                imgElement.classList.remove('d-none');
+                placeholderElement.classList.add('d-none');
+            } else {
+                imgElement.classList.add('d-none');
+                placeholderElement.classList.remove('d-none');
+            }
+
+            modalDetalhes.show();
+        }
+    </script>
+</body>
+</html>
