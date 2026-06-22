@@ -37,7 +37,6 @@
             color: var(--text-muted) !important;
         }
 
-        /* Estilização das Abas Bootstrap */
         .nav-tabs {
             border-bottom: 2px solid var(--border-color);
         }
@@ -53,7 +52,6 @@
             border-bottom: 3px solid var(--accent-blue);
         }
 
-        /* Enquadramento de Cards de Métrica */
         .card-stats {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -82,7 +80,6 @@
             font-weight: 500;
         }
 
-        /* Estilos de Tabelas Customizadas */
         .table-dark-custom {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -102,42 +99,42 @@
             color: #f8fafc;
         }
 
-        /* Badges nítidos */
         .badge-ok { background: rgba(16, 185, 129, 0.25); color: #34d399; border: 1px solid #10b981; font-weight: 600; }
         .badge-warn { background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid #f59e0b; font-weight: 600; }
         .badge-crit { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; font-weight: 600; }
 
-        /* Estilização da Tabela de Grade Diária (Matriz) */
+        /* Estrutura da Matriz */
         .table-grid {
             border-collapse: separate;
-            border-spacing: 3px;
+            border-spacing: 4px;
         }
         .table-grid th {
             background: #0f172a;
             color: #f1f5f9;
             text-align: center;
             font-size: 0.8rem;
-            padding: 6px 2px;
-            min-width: 32px;
+            padding: 8px 4px;
+            min-width: 36px;
             border-radius: 4px;
         }
         .table-grid td {
             text-align: center;
-            padding: 6px 2px;
-            font-size: 0.8rem;
+            padding: 8px 4px;
+            font-size: 0.85rem;
             font-weight: bold;
             border-radius: 4px;
+            cursor: pointer;
         }
         .item-row-title {
             text-align: left !important;
-            min-width: 210px;
+            min-width: 220px;
             background: rgba(255, 255, 255, 0.05);
             color: #ffffff !important;
         }
-        .status-cell { color: #000000 !important; }
-        .status-cell-ok { background-color: var(--grid-ok); color: #ffffff !important; }
+        .status-cell { color: #ffffff !important; }
+        .status-cell-ok { background-color: var(--grid-ok); }
         .status-cell-warn { background-color: var(--grid-warn); color: #000000 !important; }
-        .status-cell-crit { background-color: var(--grid-crit); color: #ffffff !important; }
+        .status-cell-crit { background-color: var(--grid-crit); }
         .status-cell-empty { background-color: var(--grid-empty); color: var(--text-muted) !important; font-weight: normal; }
 
         .legenda-box {
@@ -171,8 +168,8 @@
         <div class="col-md-3">
             <label class="small text-muted fw-bold d-block mb-1">Mês de Referência (Matriz)</label>
             <select id="filtroMes" class="form-select form-select-sm" onchange="processarDadosFiltros()">
-                <option value="05">Maio / 2026</option>
-                <option value="06" selected>Junho / 2026</option>
+                <option value="05" selected>Maio / 2026</option>
+                <option value="06">Junho / 2026</option>
                 <option value="07">Julho / 2026</option>
             </select>
         </div>
@@ -311,7 +308,7 @@ let dadosGlobaisrondas = [];
 let dadosGlobaisItens = [];
 let chartStatusObj = null;
 
-// Lista de itens fixa idêntica ao seu index.html para ordenação perfeita do Grid
+// Itens estáticos vindos do index para mapear um a um no grid
 const itensInspecaoPadrao = [
     "Teste rápido elevador", "G2 Foyer", "Auditório 1", "Auditório 2", "Sala 1", "Sala 2",
     "Copa G2", "Elevador A", "Elevador B", "Elevador C", "Elevador D", "Elevador E",
@@ -340,30 +337,25 @@ async function inicializarDashboard() {
 function processarDadosFiltros() {
     const torreSelecionada = document.getElementById("filtroTorre").value;
 
-    // Filtro Inicial de Torres
     let rondasFiltradas = dadosGlobaisrondas;
     if (torreSelecionada !== "Todos") {
         rondasFiltradas = dadosGlobaisrondas.filter(r => r.torre === torreSelecionada);
     }
 
     const idsRondasFiltradas = rondasFiltradas.map(r => r.id);
-    
-    // Filtra itens pertencentes às rondas qualificadas no filtro
     let itensFiltrados = dadosGlobaisItens.filter(item => idsRondasFiltradas.includes(item.ronda_id));
 
-    // Correção do Bug do Undefined: Usar item_nome coletado do index.html
     const totalRondas = rondasFiltradas.length;
     const totalItens = itensFiltrados.length;
 
     const totalOK = itensFiltrados.filter(i => i.status && i.status.includes("OK")).length;
-    const totalAviso = itensFiltrados.filter(i => i.status && i.status.includes("Atenção")).length;
-    const totalProblema = itensFiltrados.filter(i => i.status && i.status.includes("Problema")).length;
+    const totalAviso = itensFiltrados.filter(i => i.status && (i.status.includes("Atenção") || i.status.includes("!!"))).length;
+    const totalProblema = itensFiltrados.filter(i => i.status && (i.status.includes("Problema") || i.status.includes("XX"))).length;
 
     const porcConformidade = totalItens > 0 ? Math.round((totalOK / totalItens) * 100) : 0;
     const mediaItens = totalRondas > 0 ? (totalItens / totalRondas).toFixed(1) : "0.0";
     const taxaAlerta = totalItens > 0 ? Math.round(((totalAviso + totalProblema) / totalItens) * 100) : 0;
 
-    // Atualizando Elementos de Texto do Painel principal
     document.getElementById("lblTotalRondas").innerText = totalRondas;
     document.getElementById("lblTotalItens").innerText = `${totalItens} itens`;
     document.getElementById("lblTotalOK").innerText = totalOK;
@@ -385,7 +377,7 @@ function renderizarGraficoHorizontal(ok, aviso, problema) {
     chartStatusObj = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Métricas Consolidadas'],
+            labels: ['Status'],
             datasets: [
                 { label: 'OK', data: [ok], backgroundColor: '#10b981' },
                 { label: 'Atenção', data: [aviso], backgroundColor: '#f59e0b' },
@@ -412,19 +404,14 @@ function renderizarTabelaCronologica(rondas, itens) {
     const mapaRondas = {};
     rondas.forEach(r => { mapaRondas[r.id] = r; });
 
-    // Ordenação garantindo que itens mais recentes do app apareçam primeiro no topo
     const itensOrdenados = [...itens].sort((a, b) => {
         const rA = mapaRondas[a.ronda_id];
         const rB = mapaRondas[b.ronda_id];
         if (!rA || !rB) return 0;
         
-        const dataA = new Date(rA.data_ronda.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1"));
-        const dataB = new Date(rB.data_ronda.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1"));
-        
-        if (dataB - dataA !== 0) return dataB - dataA;
-        if (a.status.includes("Problema") && !b.status.includes("Problema")) return -1;
-        if (!a.status.includes("Problema") && b.status.includes("Problema")) return 1;
-        return 0;
+        const dataA = new Date(rA.data_ronda.split(',')[0].split('/').reverse().join('-'));
+        const dataB = new Date(rB.data_ronda.split(',')[0].split('/').reverse().join('-'));
+        return dataB - dataA;
     });
 
     if (itensOrdenados.length === 0) {
@@ -437,17 +424,14 @@ function renderizarTabelaCronologica(rondas, itens) {
         if (!rondaPai) return;
 
         let badgeClass = "badge-ok";
-        if (item.status.includes("Atenção")) badgeClass = "badge-warn";
-        if (item.status.includes("Problema")) badgeClass = "badge-crit";
+        if (item.status.includes("Atenção") || item.status.includes("!!")) badgeClass = "badge-warn";
+        if (item.status.includes("Problema") || item.status.includes("XX")) badgeClass = "badge-crit";
 
-        // IMPORTANTE: Alterado de item.item para item.item_nome para sanar o erro do UNDEFINED
-        const exibirNomeItem = item.item_nome || "Item Não Nomeado";
-
-        const tr = document.createElement("tr");
+        tr = document.createElement("tr");
         tr.innerHTML = `
             <td><strong class="text-white">${rondaPai.data_ronda || ''}</strong></td>
             <td><span class="badge bg-secondary fw-semibold">${rondaPai.torre}</span></td>
-            <td><span class="fw-semibold text-white">${exibirNomeItem}</span></td>
+            <td><span class="fw-semibold text-white">${item.item_nome || 'Item'}</span></td>
             <td><span class="badge ${badgeClass}">${item.status}</span></td>
             <td class="text-truncate text-white-50" style="max-width: 260px;" title="${item.observacao}">${item.observacao || ''}</td>
         `;
@@ -460,7 +444,6 @@ function renderizarMatrizGradeMensal(rondas, itens) {
     const anoSelecionado = "2026";
     const diasNoMes = new Date(anoSelecionado, mesSelecionado, 0).getDate();
     
-    // Injeta numeração de dias no cabeçalho
     const headerRow = document.getElementById("headerDias");
     headerRow.innerHTML = `<th class="text-start">Item / Local Avaliado</th>`;
     for (let d = 1; d <= diasNoMes; d++) {
@@ -469,13 +452,14 @@ function renderizarMatrizGradeMensal(rondas, itens) {
         headerRow.appendChild(th);
     }
 
-    // Mapa relacionando Rondas às datas ISO (YYYY-MM-DD)
+    // Normalização estrita da data removendo a vírgula do "toLocaleString"
     const mapaRondasPorData = {};
     rondas.forEach(r => {
         if (r.data_ronda) {
-            const partes = r.data_ronda.split(' ')[0].split('/');
+            const dataApenas = r.data_ronda.split(',')[0].trim(); 
+            const partes = dataApenas.split('/');
             if(partes.length === 3) {
-                const dataIso = `${partes[2]}-${partes[1]}-${partes[0]}`;
+                const dataIso = `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
                 mapaRondasPorData[dataIso] = r.id;
             }
         }
@@ -484,7 +468,6 @@ function renderizarMatrizGradeMensal(rondas, itens) {
     const tbody = document.getElementById("corpoGrid");
     tbody.innerHTML = "";
 
-    // Geração dinâmica das linhas contendo os quadradinhos coloridos de status diário
     itensInspecaoPadrao.forEach(nomeItem => {
         const tr = document.createElement("tr");
         
@@ -499,7 +482,6 @@ function renderizarMatrizGradeMensal(rondas, itens) {
             const rondaIdDoDia = mapaRondasPorData[dataCorrenteStr];
 
             if (rondaIdDoDia) {
-                // Buscando registro correspondente mapeado pela coluna item_nome
                 const registroItem = itens.find(i => i.ronda_id === rondaIdDoDia && i.item_nome === nomeItem);
                 
                 if (registroItem && registroItem.status) {
@@ -507,11 +489,11 @@ function renderizarMatrizGradeMensal(rondas, itens) {
                         tdDia.innerText = "✓";
                         tdDia.className = "status-cell status-cell-ok";
                         tdDia.title = `[Dia ${dia}] OK\nObs: ${registroItem.observacao || 'Nenhuma'}`;
-                    } else if (registroItem.status.includes("Atenção")) {
+                    } else if (registroItem.status.includes("Atenção") || registroItem.status.includes("!!")) {
                         tdDia.innerText = "⚠️";
                         tdDia.className = "status-cell status-cell-warn";
                         tdDia.title = `[Dia ${dia}] ATENÇÃO\nObs: ${registroItem.observacao || ''}`;
-                    } else if (registroItem.status.includes("Problema")) {
+                    } else if (registroItem.status.includes("Problema") || registroItem.status.includes("XX")) {
                         tdDia.innerText = "✕";
                         tdDia.className = "status-cell status-cell-crit";
                         tdDia.title = `[Dia ${dia}] CRÍTICO\nObs: ${registroItem.observacao || ''}`;
