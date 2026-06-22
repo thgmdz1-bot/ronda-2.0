@@ -225,4 +225,300 @@
                 <div class="col-md-2">
                     <div class="card-stats stats-kpi2">
                         <span class="text-muted small d-block uppercase fw-bold">Taxa de Alerta</span>
-                        <h2 class="fw-bold my-1" id="lbl
+                        <h2 class="fw-bold my-1" id="lblTaxaAlerta" style="color: #f472b6;">0%</h2>
+                        <span class="text-muted small">Índice Geral Falhas</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card border-secondary p-3 h-100" style="background: var(--bg-card);">
+                        <h6 class="fw-bold mb-3 text-white">📊 Distribuição Proporcional de Status</h6>
+                        <div style="position: relative; height:220px;">
+                            <canvas id="chartStatus"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="table-dark-custom h-100">
+                        <div class="p-3 border-bottom border-secondary" style="background: #111827;">
+                            <h6 class="fw-bold mb-0 text-white">📋 Últimos Eventos Registrados Cronologicamente</h6>
+                        </div>
+                        <div class="table-responsive" style="max-height: 250px;">
+                            <table class="table table-dark table-hover mb-0 align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Data/Hora</th>
+                                        <th>Torre</th>
+                                        <th>Item Verificado</th>
+                                        <th>Status</th>
+                                        <th>Observação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelaOcorrencias">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">Nenhum registro encontrado.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="tabMatriz" role="tabpanel">
+            <div class="mb-3 p-3 rounded border border-secondary d-flex gap-4 align-items-center" style="background: #111827;">
+                <span class="text-white fw-semibold small">Legenda da Grade:</span>
+                <div class="small text-white"><span class="legenda-box" style="background: var(--grid-ok);"></span> ✓ OK</div>
+                <div class="small text-white"><span class="legenda-box" style="background: var(--grid-warn);"></span> 🟡 Atenção</div>
+                <div class="small text-white"><span class="legenda-box" style="background: var(--grid-crit);"></span> 🔴 Problema</div>
+                <div class="small text-muted"><span class="legenda-box" style="background: var(--grid-empty);"></span> - Sem Inspeção</div>
+            </div>
+
+            <div class="table-dark-custom p-3">
+                <div class="table-responsive">
+                    <table class="table table-dark table-grid mb-0">
+                        <thead>
+                            <tr id="headerDias">
+                                <th class="text-start">Item / Local Avaliado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoGrid">
+                            <tr>
+                                <td colspan="32" class="text-center text-muted py-4">Carregando linhas da grade mensal...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://orhudsajuoknkfcqhgah.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yaHVkc2FqdW9rbmtmY3FoZ2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MjU0NTYsImV4cCI6MjA5NDIwMTQ1Nn0.85p-inG7Y2c_vf8tupyA4s3suv1Ba_s1GJ_2EDdP4YQ";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let dadosGlobaisrondas = [];
+let dadosGlobaisItens = [];
+let chartStatusObj = null;
+
+const itensInspecaoPadrao = [
+    "Teste rápido elevador", "G2 Foyer", "Auditório 1", "Auditório 2", "Sala 1", "Sala 2",
+    "Copa G2", "Elevador A", "Elevador B", "Elevador C", "Elevador D", "Elevador E",
+    "Elevador SERVIÇO", "Elevador GARAGEM 1", "Elevador GARAGEM 2", "Heliponto", "Halls e WC",
+    "Botoeira dos elevadores", "Portas de elevadores", "Janela Hall", "Iluminação recepção",
+    "Funcionamento irrigação", "Portões térreo", "Catracas", "Câmeras", "Vidros fachada", "Refeitório"
+];
+
+async function inicializarDashboard() {
+    try {
+        const { data: rondas, error: errRondas } = await supabaseClient.from('rondas').select('*');
+        if (errRondas) throw errRondas;
+
+        const { data: itens, error: errItens } = await supabaseClient.from('ronda_itens').select('*');
+        if (errItens) throw errItens;
+
+        dadosGlobaisrondas = rondas || [];
+        dadosGlobaisItens = itens || [];
+
+        processarDadosFiltros();
+    } catch (error) {
+        console.error("Erro ao sincronizar dados com Supabase:", error);
+    }
+}
+
+function processarDadosFiltros() {
+    const torreSelecionada = document.getElementById("filtroTorre").value;
+
+    let rondasFiltradas = dadosGlobaisrondas;
+    if (torreSelecionada !== "Todos") {
+        rondasFiltradas = dadosGlobaisrondas.filter(r => r.torre === torreSelecionada);
+    }
+
+    const idsRondasFiltradas = rondasFiltradas.map(r => r.id);
+    let itensFiltrados = dadosGlobaisItens.filter(item => idsRondasFiltradas.includes(item.ronda_id));
+
+    const totalRondas = rondasFiltradas.length;
+    const totalItens = itensFiltrados.length;
+
+    const totalOK = itensFiltrados.filter(i => i.status && i.status.includes("OK")).length;
+    const totalAviso = itensFiltrados.filter(i => i.status && (i.status.includes("Atenção") || i.status.includes("!!"))).length;
+    const totalProblema = itensFiltrados.filter(i => i.status && (i.status.includes("Problema") || i.status.includes("XX"))).length;
+
+    const porcConformidade = totalItens > 0 ? Math.round((totalOK / totalItens) * 100) : 0;
+    const mediaItens = totalRondas > 0 ? (totalItens / totalRondas).toFixed(1) : "0.0";
+    const taxaAlerta = totalItens > 0 ? Math.round(((totalAviso + totalProblema) / totalItens) * 100) : 0;
+
+    document.getElementById("lblTotalRondas").innerText = totalRondas;
+    document.getElementById("lblTotalItens").innerText = `${totalItens} itens`;
+    document.getElementById("lblTotalOK").innerText = totalOK;
+    document.getElementById("lblPercOK").innerText = `${porcConformidade}% conformidade`;
+    document.getElementById("lblTotalAviso").innerText = totalAviso;
+    document.getElementById("lblTotalProblema").innerText = totalProblema;
+    document.getElementById("lblMediaItens").innerText = mediaItens;
+    document.getElementById("lblTaxaAlerta").innerText = `${taxaAlerta}%`;
+
+    renderizarGraficoHorizontal(totalOK, totalAviso, totalProblema);
+    renderizarTabelaCronologica(rondasFiltradas, itensFiltrados);
+    renderizarMatrizGradeMensal(rondasFiltradas, itensFiltrados);
+}
+
+function renderizarGraficoHorizontal(ok, aviso, problema) {
+    const ctx = document.getElementById('chartStatus').getContext('2d');
+    if (chartStatusObj) chartStatusObj.destroy();
+
+    chartStatusObj = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Status'],
+            datasets: [
+                { label: 'OK', data: [ok], backgroundColor: '#10b981' },
+                { label: 'Atenção', data: [aviso], backgroundColor: '#f59e0b' },
+                { label: 'Problema', data: [problema], backgroundColor: '#ef4444' }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc' } } },
+            scales: {
+                x: { stacked: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                y: { stacked: true, grid: { display: false }, ticks: { color: '#f8fafc' } }
+            }
+        }
+    });
+}
+
+function renderizarTabelaCronologica(rondas, itens) {
+    const tbody = document.getElementById("tabelaOcorrencias");
+    tbody.innerHTML = "";
+
+    const mapaRondas = {};
+    rondas.forEach(r => { mapaRondas[r.id] = r; });
+
+    const itensOrdenados = [...itens].sort((a, b) => {
+        const rA = mapaRondas[a.ronda_id];
+        const rB = mapaRondas[b.ronda_id];
+        if (!rA || !rB) return 0;
+        
+        const dataA = new Date(rA.data_ronda.split(',')[0].split('/').reverse().join('-'));
+        const dataB = new Date(rB.data_ronda.split(',')[0].split('/').reverse().join('-'));
+        return dataB - dataA;
+    });
+
+    if (itensOrdenados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Nenhum registro encontrado.</td></tr>`;
+        return;
+    }
+
+    itensOrdenados.forEach(item => {
+        const rondaPai = mapaRondas[item.ronda_id];
+        if (!rondaPai) return;
+
+        let badgeClass = "badge-ok";
+        if (item.status.includes("Atenção") || item.status.includes("!!")) badgeClass = "badge-warn";
+        if (item.status.includes("Problema") || item.status.includes("XX")) badgeClass = "badge-crit";
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td><strong class="text-white">${rondaPai.data_ronda || ''}</strong></td>
+            <td><span class="badge bg-secondary fw-semibold">${rondaPai.torre}</span></td>
+            <td><span class="fw-semibold text-white">${item.item_nome || 'Item'}</span></td>
+            <td><span class="badge ${badgeClass}">${item.status}</span></td>
+            <td class="text-truncate text-white-50" style="max-width: 260px;" title="${item.observacao}">${item.observacao || ''}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderizarMatrizGradeMensal(rondas, itens) {
+    const mesFiltrado = parseInt(document.getElementById("filtroMes").value, 10);
+    const anoSelecionado = 2026;
+    const diasNoMes = new Date(anoSelecionado, mesFiltrado, 0).getDate();
+    
+    const headerRow = document.getElementById("headerDias");
+    headerRow.innerHTML = `<th class="text-start">Item / Local Avaliado</th>`;
+    for (let d = 1; d <= diasNoMes; d++) {
+        const th = document.createElement("th");
+        th.innerText = String(d).padStart(2, '0');
+        headerRow.appendChild(th);
+    }
+
+    // MAPEAMENTO ROBUSTO: Lê datas como "25/05/2026" e extrai dia/mês inteiros
+    // Isso evita qualquer quebra por causa de zeros à esquerda ou vírgulas
+    const mapaGridStatus = {}; 
+
+    rondas.forEach(r => {
+        if (r.data_ronda) {
+            const dataLimpa = r.data_ronda.split(',')[0].trim(); // Extrai apenas "25/05/2026"
+            const partes = dataLimpa.split('/');
+            if (partes.length === 3) {
+                const diaDb = parseInt(partes[0], 10);
+                const mesDb = parseInt(partes[1], 10);
+                const anoDb = parseInt(partes[2], 10);
+
+                // Se bater com o mês e ano do filtro, mapeia os itens desta ronda
+                if (mesDb === mesFiltrado && anoDb === anoSelecionado) {
+                    const itensDaRonda = itens.filter(i => i.ronda_id === r.id);
+                    itensDaRonda.forEach(it => {
+                        const chaveMapeamento = `${it.item_nome}_${diaDb}`;
+                        mapaGridStatus[chaveMapeamento] = it;
+                    });
+                }
+            }
+        }
+    });
+
+    const tbody = document.getElementById("corpoGrid");
+    tbody.innerHTML = "";
+
+    itensInspecaoPadrao.forEach(nomeItem => {
+        const tr = document.createElement("tr");
+        
+        const tdTitulo = document.createElement("td");
+        tdTitulo.className = "item-row-title fw-bold";
+        tdTitulo.innerText = nomeItem;
+        tr.appendChild(tdTitulo);
+
+        for (let dia = 1; dia <= diasNoMes; dia++) {
+            const tdDia = document.createElement("td");
+            const registroItem = mapaGridStatus[`${nomeItem}_${dia}`];
+
+            if (registroItem && registroItem.status) {
+                if (registroItem.status.includes("OK")) {
+                    tdDia.innerText = "✓";
+                    tdDia.className = "status-cell status-cell-ok";
+                    tdDia.title = `[Dia ${dia}] OK\nObs: ${registroItem.observacao || 'Nenhuma'}`;
+                } else if (registroItem.status.includes("Atenção") || registroItem.status.includes("!!")) {
+                    tdDia.innerText = "⚠️";
+                    tdDia.className = "status-cell status-cell-warn";
+                    tdDia.title = `[Dia ${dia}] ATENÇÃO\nObs: ${registroItem.observacao || ''}`;
+                } else if (registroItem.status.includes("Problema") || registroItem.status.includes("XX")) {
+                    tdDia.innerText = "✕";
+                    tdDia.className = "status-cell status-cell-crit";
+                    tdDia.title = `[Dia ${dia}] CRÍTICO\nObs: ${registroItem.observacao || ''}`;
+                } else {
+                    tdDia.innerText = "-";
+                    tdDia.className = "status-cell-empty";
+                }
+            } else {
+                tdDia.innerText = "-";
+                tdDia.className = "status-cell-empty";
+            }
+            tr.appendChild(tdDia);
+        }
+        tbody.appendChild(tr);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", inicializarDashboard);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
