@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Operações - ITC</title>
+    <title>Dashboard & Matriz de Operações - ITC</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://unpkg.com/@supabase/supabase-js@2.39.8/dist/umd/supabase.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -19,6 +19,12 @@
             --accent-red: #ef4444;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
+            
+            /* Cores da Matriz */
+            --grid-ok: #10b981;
+            --grid-warn: #f59e0b;
+            --grid-crit: #ef4444;
+            --grid-empty: #334155;
         }
 
         body {
@@ -31,6 +37,23 @@
             color: var(--text-muted) !important;
         }
 
+        /* Estilização das Abas Bootstrap */
+        .nav-tabs {
+            border-bottom: 2px solid var(--border-color);
+        }
+        .nav-tabs .nav-link {
+            color: var(--text-muted);
+            border: none;
+            font-weight: 600;
+            padding: 10px 20px;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: transparent;
+            color: var(--accent-blue) !important;
+            border-bottom: 3px solid var(--accent-blue);
+        }
+
+        /* Enquadramento de Cards de Métrica */
         .card-stats {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -40,16 +63,11 @@
             overflow: hidden;
             height: 100%;
         }
-
         .card-stats::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
+            top: 0; left: 0; width: 4px; height: 100%;
         }
-
         .stats-total::before { background: var(--accent-blue); }
         .stats-ok::before { background: var(--accent-green); }
         .stats-warn::before { background: var(--accent-yellow); }
@@ -64,13 +82,13 @@
             font-weight: 500;
         }
 
+        /* Estilos de Tabelas Customizadas */
         .table-dark-custom {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             overflow: hidden;
         }
-
         .table-dark-custom th {
             background: #0f172a;
             color: #f1f5f9;
@@ -78,16 +96,53 @@
             border-bottom: 2px solid var(--border-color);
             padding: 12px 16px;
         }
-
         .table-dark-custom td {
             padding: 12px 16px;
             border-bottom: 1px solid rgba(71, 85, 105, 0.7);
             color: #f8fafc;
         }
 
+        /* Badges nítidos */
         .badge-ok { background: rgba(16, 185, 129, 0.25); color: #34d399; border: 1px solid #10b981; font-weight: 600; }
         .badge-warn { background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid #f59e0b; font-weight: 600; }
         .badge-crit { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; font-weight: 600; }
+
+        /* Estilização da Tabela de Grade Diária (Matriz) */
+        .table-grid {
+            border-collapse: separate;
+            border-spacing: 3px;
+        }
+        .table-grid th {
+            background: #0f172a;
+            color: #f1f5f9;
+            text-align: center;
+            font-size: 0.8rem;
+            padding: 6px 2px;
+            min-width: 32px;
+            border-radius: 4px;
+        }
+        .table-grid td {
+            text-align: center;
+            padding: 6px 2px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        .item-row-title {
+            text-align: left !important;
+            min-width: 210px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff !important;
+        }
+        .status-cell { color: #000000 !important; }
+        .status-cell-ok { background-color: var(--grid-ok); color: #ffffff !important; }
+        .status-cell-warn { background-color: var(--grid-warn); color: #000000 !important; }
+        .status-cell-crit { background-color: var(--grid-crit); color: #ffffff !important; }
+        .status-cell-empty { background-color: var(--grid-empty); color: var(--text-muted) !important; font-weight: normal; }
+
+        .legenda-box {
+            display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 5px; vertical-align: middle;
+        }
     </style>
 </head>
 <body class="p-4">
@@ -95,8 +150,8 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="mb-1 fw-bold text-white">📊 Dashboard de Operações Condomínio</h3>
-            <p class="text-muted small mb-0">Monitoramento analítico em tempo real do ITC</p>
+            <h3 class="mb-1 fw-bold text-white">📊 Central de Operações e Monitoramento</h3>
+            <p class="text-muted small mb-0">Dados consolidados em tempo real integrados com o app ITC</p>
         </div>
         <div>
             <a href="index.html" class="btn btn-outline-light btn-sm me-2 fw-semibold">⬅️ Voltar ao App</a>
@@ -106,140 +161,197 @@
 
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <select id="filtroTorre" class="form-select form-select-sm" onchange="filtrarDados()">
+            <label class="small text-muted fw-bold d-block mb-1">Filtrar Localidade</label>
+            <select id="filtroTorre" class="form-select form-select-sm" onchange="processarDadosFiltros()">
                 <option value="Todos">Todos os Locais / Torres</option>
                 <option value="Torre 1">Torre 1</option>
                 <option value="Torre 2">Torre 2</option>
             </select>
         </div>
-    </div>
-
-    <div class="row g-3 mb-4">
-        <div class="col-md-2">
-            <div class="card-stats stats-total">
-                <span class="text-muted small d-block uppercase fw-bold">Total de Rondas</span>
-                <h2 class="fw-bold my-1 text-white" id="lblTotalRondas">0</h2>
-                <span class="text-muted small" id="lblTotalItens" style="color: #cbd5e1 !important;">0 itens</span>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card-stats stats-ok">
-                <span class="text-muted small d-block uppercase fw-bold">Conformes (OK)</span>
-                <h2 class="fw-bold my-1 text-success" id="lblTotalOK">0</h2>
-                <span class="fw-semibold small text-success" id="lblPercOK">0% de conf.</span>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card-stats stats-warn">
-                <span class="text-muted small d-block uppercase fw-bold">Em Atenção</span>
-                <h2 class="fw-bold my-1 text-warning" id="lblTotalAviso">0</h2>
-                <span class="text-muted small">Monitoramento</span>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card-stats stats-crit">
-                <span class="text-muted small d-block uppercase fw-bold">Com Problema</span>
-                <h2 class="fw-bold my-1 text-danger" id="lblTotalProblema">0</h2>
-                <span class="text-muted small">Pendências críticas</span>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card-stats stats-kpi1">
-                <span class="text-muted small d-block uppercase fw-bold">Itens / Ronda</span>
-                <h2 class="fw-bold my-1" id="lblMediaItens" style="color: #a78bfa;">0.0</h2>
-                <span class="text-muted small">Média de amostragem</span>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card-stats stats-kpi2">
-                <span class="text-muted small d-block uppercase fw-bold">Taxa de Alerta</span>
-                <h2 class="fw-bold my-1" id="lblTaxaAlerta" style="color: #f472b6;">0%</h2>
-                <span class="text-muted small">Não conformidades</span>
-            </div>
+        <div class="col-md-3">
+            <label class="small text-muted fw-bold d-block mb-1">Mês de Referência (Matriz)</label>
+            <select id="filtroMes" class="form-select form-select-sm" onchange="processarDadosFiltros()">
+                <option value="05">Maio / 2026</option>
+                <option value="06" selected>Junho / 2026</option>
+                <option value="07">Julho / 2026</option>
+            </select>
         </div>
     </div>
 
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="card border-secondary p-3 h-100" style="background: var(--bg-card);">
-                <h6 class="fw-bold mb-3 text-white">📊 Comparativo Proporcional de Status</h6>
-                <div style="position: relative; height:220px;">
-                    <canvas id="chartStatus"></canvas>
+    <ul class="nav nav-tabs mb-4" id="dashTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="visao-tab" data-bs-toggle="tab" data-bs-target="#tabVisao" type="button">📊 Visão Geral e Gráficos</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="matriz-tab" data-bs-toggle="tab" data-bs-target="#tabMatriz" type="button">📅 Matriz de Acompanhamento Diário</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="dashTabsContent">
+        
+        <div class="tab-pane fade show active" id="tabVisao" role="tabpanel">
+            <div class="row g-3 mb-4">
+                <div class="col-md-2">
+                    <div class="card-stats stats-total">
+                        <span class="text-muted small d-block uppercase fw-bold">Total Rondas</span>
+                        <h2 class="fw-bold my-1 text-white" id="lblTotalRondas">0</h2>
+                        <span class="text-muted small" id="lblTotalItens" style="color: #cbd5e1 !important;">0 itens</span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card-stats stats-ok">
+                        <span class="text-muted small d-block uppercase fw-bold">Conformes (OK)</span>
+                        <h2 class="fw-bold my-1 text-success" id="lblTotalOK">0</h2>
+                        <span class="fw-semibold small text-success" id="lblPercOK">0% conf.</span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card-stats stats-warn">
+                        <span class="text-muted small d-block uppercase fw-bold">Em Atenção</span>
+                        <h2 class="fw-bold my-1 text-warning" id="lblTotalAviso">0</h2>
+                        <span class="text-muted small">Monitoramento</span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card-stats stats-crit">
+                        <span class="text-muted small d-block uppercase fw-bold">Com Problema</span>
+                        <h2 class="fw-bold my-1 text-danger" id="lblTotalProblema">0</h2>
+                        <span class="text-muted small">Pendências críticas</span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card-stats stats-kpi1">
+                        <span class="text-muted small d-block uppercase fw-bold">Itens / Ronda</span>
+                        <h2 class="fw-bold my-1" id="lblMediaItens" style="color: #a78bfa;">0.0</h2>
+                        <span class="text-muted small">Média por checklist</span>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card-stats stats-kpi2">
+                        <span class="text-muted small d-block uppercase fw-bold">Taxa de Alerta</span>
+                        <h2 class="fw-bold my-1" id="lblTaxaAlerta" style="color: #f472b6;">0%</h2>
+                        <span class="text-muted small">Índice Geral Falhas</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card border-secondary p-3 h-100" style="background: var(--bg-card);">
+                        <h6 class="fw-bold mb-3 text-white">📊 Distribuição Proporcional de Status</h6>
+                        <div style="position: relative; height:220px;">
+                            <canvas id="chartStatus"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="table-dark-custom h-100">
+                        <div class="p-3 border-bottom border-secondary" style="background: #111827;">
+                            <h6 class="fw-bold mb-0 text-white">📋 Últimos Eventos Registrados Cronologicamente</h6>
+                        </div>
+                        <div class="table-responsive" style="max-height: 250px;">
+                            <table class="table table-dark table-hover mb-0 align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Data/Hora</th>
+                                        <th>Torre</th>
+                                        <th>Item Verificado</th>
+                                        <th>Status</th>
+                                        <th>Observação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelaOcorrencias">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">Nenhum registro encontrado.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-8">
-            <div class="table-dark-custom h-100">
-                <div class="p-3 border-bottom border-secondary" style="background: #111827;">
-                    <h6 class="fw-bold mb-0 text-white">📋 Histórico Cronológico por Categoria</h6>
-                </div>
-                <div class="table-responsive" style="max-height: 250px;">
-                    <table class="table table-dark table-hover mb-0 align-middle">
+
+        <div class="tab-pane fade" id="tabMatriz" role="tabpanel">
+            <div class="mb-3 p-3 rounded border border-secondary d-flex gap-4 align-items-center" style="background: #111827;">
+                <span class="text-white fw-semibold small">Legenda da Grade:</span>
+                <div class="small text-white"><span class="legenda-box" style="background: var(--grid-ok);"></span> ✓ OK</div>
+                <div class="small text-white"><span class="legenda-box" style="background: var(--grid-warn);"></span> 🟡 Atenção</div>
+                <div class="small text-white"><span class="legenda-box" style="background: var(--grid-crit);"></span> 🔴 Problema</div>
+                <div class="small text-muted"><span class="legenda-box" style="background: var(--grid-empty);"></span> - Sem Inspeção</div>
+            </div>
+
+            <div class="table-dark-custom p-3">
+                <div class="table-responsive">
+                    <table class="table table-dark table-grid mb-0">
                         <thead>
-                            <tr>
-                                <th>Data/Hora</th>
-                                <th>Torre</th>
-                                <th>Categoria / Item</th>
-                                <th>Status</th>
-                                <th>Observação</th>
+                            <tr id="headerDias">
+                                <th class="text-start">Item / Local Avaliado</th>
                             </tr>
                         </thead>
-                        <tbody id="tabelaOcorrencias">
+                        <tbody id="corpoGrid">
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">Nenhum registro encontrado.</td>
+                                <td colspan="32" class="text-center text-muted py-4">Carregando linhas da grade mensal...</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
 <script>
 const SUPABASE_URL = "https://orhudsajuoknkfcqhgah.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yaHVkc2FqdW9rbmtmY3FoZ2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MjU0NTYsImV4cCI6MjA5NDIwMTQ1Nn0.85p-inG7Y2c_vf8tupyA4s3suv1Ba_s1GJ_2EDdP4YQ";
-
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let dadosGlobaisrondas = [];
 let dadosGlobaisItens = [];
 let chartStatusObj = null;
 
+// Lista de itens fixa idêntica ao seu index.html para ordenação perfeita do Grid
+const itensInspecaoPadrao = [
+    "Teste rápido elevador", "G2 Foyer", "Auditório 1", "Auditório 2", "Sala 1", "Sala 2",
+    "Copa G2", "Elevador A", "Elevador B", "Elevador C", "Elevador D", "Elevador E",
+    "Elevador SERVIÇO", "Elevador GARAGEM 1", "Elevador GARAGEM 2", "Heliponto", "Halls e WC",
+    "Botoeira dos elevadores", "Portas de elevadores", "Janela Hall", "Iluminação recepção",
+    "Funcionamento irrigação", "Portões térreo", "Catracas", "Câmeras", "Vidros fachada", "Refeitório"
+];
+
 async function inicializarDashboard() {
     try {
-        const { data: rondas, error: errRondas } = await supabaseClient
-            .from('rondas')
-            .select('*');
-            
+        const { data: rondas, error: errRondas } = await supabaseClient.from('rondas').select('*');
         if (errRondas) throw errRondas;
 
-        const { data: itens, error: errItens } = await supabaseClient
-            .from('ronda_itens')
-            .select('*');
-            
+        const { data: itens, error: errItens } = await supabaseClient.from('ronda_itens').select('*');
         if (errItens) throw errItens;
 
         dadosGlobaisrondas = rondas || [];
         dadosGlobaisItens = itens || [];
 
-        filtrarDados();
+        processarDadosFiltros();
     } catch (error) {
-        console.error("Erro ao carregar dados do dashboard:", error);
+        console.error("Erro ao sincronizar dados com Supabase:", error);
     }
 }
 
-function filtrarDados() {
+function processarDadosFiltros() {
     const torreSelecionada = document.getElementById("filtroTorre").value;
 
+    // Filtro Inicial de Torres
     let rondasFiltradas = dadosGlobaisrondas;
     if (torreSelecionada !== "Todos") {
         rondasFiltradas = dadosGlobaisrondas.filter(r => r.torre === torreSelecionada);
     }
 
     const idsRondasFiltradas = rondasFiltradas.map(r => r.id);
+    
+    // Filtra itens pertencentes às rondas qualificadas no filtro
     let itensFiltrados = dadosGlobaisItens.filter(item => idsRondasFiltradas.includes(item.ronda_id));
 
+    // Correção do Bug do Undefined: Usar item_nome coletado do index.html
     const totalRondas = rondasFiltradas.length;
     const totalItens = itensFiltrados.length;
 
@@ -248,12 +360,10 @@ function filtrarDados() {
     const totalProblema = itensFiltrados.filter(i => i.status && i.status.includes("Problema")).length;
 
     const porcConformidade = totalItens > 0 ? Math.round((totalOK / totalItens) * 100) : 0;
-    
-    // Cálculos dos novos KPIs
     const mediaItens = totalRondas > 0 ? (totalItens / totalRondas).toFixed(1) : "0.0";
     const taxaAlerta = totalItens > 0 ? Math.round(((totalAviso + totalProblema) / totalItens) * 100) : 0;
 
-    // Atualiza os indicadores na tela
+    // Atualizando Elementos de Texto do Painel principal
     document.getElementById("lblTotalRondas").innerText = totalRondas;
     document.getElementById("lblTotalItens").innerText = `${totalItens} itens`;
     document.getElementById("lblTotalOK").innerText = totalOK;
@@ -263,22 +373,19 @@ function filtrarDados() {
     document.getElementById("lblMediaItens").innerText = mediaItens;
     document.getElementById("lblTaxaAlerta").innerText = `${taxaAlerta}%`;
 
-    renderizarGrafico(totalOK, totalAviso, totalProblema);
-    renderizarTabela(rondasFiltradas, itensFiltrados);
+    renderizarGraficoHorizontal(totalOK, totalAviso, totalProblema);
+    renderizarTabelaCronologica(rondasFiltradas, itensFiltrados);
+    renderizarMatrizGradeMensal(rondasFiltradas, itensFiltrados);
 }
 
-function renderizarGrafico(ok, aviso, problema) {
+function renderizarGraficoHorizontal(ok, aviso, problema) {
     const ctx = document.getElementById('chartStatus').getContext('2d');
-    
-    if (chartStatusObj) {
-        chartStatusObj.destroy();
-    }
+    if (chartStatusObj) chartStatusObj.destroy();
 
-    // Mudança para gráfico de barras empilhadas horizontais (melhor legibilidade que pizza)
     chartStatusObj = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Status dos Itens'],
+            labels: ['Métricas Consolidadas'],
             datasets: [
                 { label: 'OK', data: [ok], backgroundColor: '#10b981' },
                 { label: 'Atenção', data: [aviso], backgroundColor: '#f59e0b' },
@@ -289,9 +396,7 @@ function renderizarGrafico(ok, aviso, problema) {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { color: '#f8fafc' } }
-            },
+            plugins: { legend: { position: 'bottom', labels: { color: '#f8fafc' } } },
             scales: {
                 x: { stacked: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
                 y: { stacked: true, grid: { display: false }, ticks: { color: '#f8fafc' } }
@@ -300,34 +405,30 @@ function renderizarGrafico(ok, aviso, problema) {
     });
 }
 
-function renderizarTabela(rondas, itens) {
+function renderizarTabelaCronologica(rondas, itens) {
     const tbody = document.getElementById("tabelaOcorrencias");
     tbody.innerHTML = "";
 
     const mapaRondas = {};
     rondas.forEach(r => { mapaRondas[r.id] = r; });
 
-    // Correção Crítica de Ordenação: Organiza primariamente por Data decrescente (Mais atuais primeiro)
+    // Ordenação garantindo que itens mais recentes do app apareçam primeiro no topo
     const itensOrdenados = [...itens].sort((a, b) => {
         const rA = mapaRondas[a.ronda_id];
         const rB = mapaRondas[b.ronda_id];
-        
         if (!rA || !rB) return 0;
         
-        // Compara as datas das rondas para garantir a cronologia correta
         const dataA = new Date(rA.data_ronda.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1"));
         const dataB = new Date(rB.data_ronda.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1"));
         
         if (dataB - dataA !== 0) return dataB - dataA;
-        
-        // Se empatar na data, joga os problemas para cima
         if (a.status.includes("Problema") && !b.status.includes("Problema")) return -1;
         if (!a.status.includes("Problema") && b.status.includes("Problema")) return 1;
         return 0;
     });
 
     if (itensOrdenados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Nenhum dado encontrado para os filtros selecionados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">Nenhum registro encontrado.</td></tr>`;
         return;
     }
 
@@ -339,19 +440,101 @@ function renderizarTabela(rondas, itens) {
         if (item.status.includes("Atenção")) badgeClass = "badge-warn";
         if (item.status.includes("Problema")) badgeClass = "badge-crit";
 
+        // IMPORTANTE: Alterado de item.item para item.item_nome para sanar o erro do UNDEFINED
+        const exibirNomeItem = item.item_nome || "Item Não Nomeado";
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td><strong class="text-white">${rondaPai.data_ronda || ''}</strong></td>
             <td><span class="badge bg-secondary fw-semibold">${rondaPai.torre}</span></td>
-            <td><span class="text-info font-monospace small">[${item.categoria || 'Geral'}]</span> <span class="fw-semibold">${item.item}</span></td>
+            <td><span class="fw-semibold text-white">${exibirNomeItem}</span></td>
             <td><span class="badge ${badgeClass}">${item.status}</span></td>
-            <td class="text-truncate text-white-50" style="max-width: 250px;" title="${item.observacao}">${item.observacao || ''}</td>
+            <td class="text-truncate text-white-50" style="max-width: 260px;" title="${item.observacao}">${item.observacao || ''}</td>
         `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderizarMatrizGradeMensal(rondas, itens) {
+    const mesSelecionado = document.getElementById("filtroMes").value;
+    const anoSelecionado = "2026";
+    const diasNoMes = new Date(anoSelecionado, mesSelecionado, 0).getDate();
+    
+    // Injeta numeração de dias no cabeçalho
+    const headerRow = document.getElementById("headerDias");
+    headerRow.innerHTML = `<th class="text-start">Item / Local Avaliado</th>`;
+    for (let d = 1; d <= diasNoMes; d++) {
+        const th = document.createElement("th");
+        th.innerText = String(d).padStart(2, '0');
+        headerRow.appendChild(th);
+    }
+
+    // Mapa relacionando Rondas às datas ISO (YYYY-MM-DD)
+    const mapaRondasPorData = {};
+    rondas.forEach(r => {
+        if (r.data_ronda) {
+            const partes = r.data_ronda.split(' ')[0].split('/');
+            if(partes.length === 3) {
+                const dataIso = `${partes[2]}-${partes[1]}-${partes[0]}`;
+                mapaRondasPorData[dataIso] = r.id;
+            }
+        }
+    });
+
+    const tbody = document.getElementById("corpoGrid");
+    tbody.innerHTML = "";
+
+    // Geração dinâmica das linhas contendo os quadradinhos coloridos de status diário
+    itensInspecaoPadrao.forEach(nomeItem => {
+        const tr = document.createElement("tr");
+        
+        const tdTitulo = document.createElement("td");
+        tdTitulo.className = "item-row-title fw-bold";
+        tdTitulo.innerText = nomeItem;
+        tr.appendChild(tdTitulo);
+
+        for (let dia = 1; dia <= diasNoMes; dia++) {
+            const tdDia = document.createElement("td");
+            const dataCorrenteStr = `${anoSelecionado}-${mesSelecionado}-${String(dia).padStart(2, '0')}`;
+            const rondaIdDoDia = mapaRondasPorData[dataCorrenteStr];
+
+            if (rondaIdDoDia) {
+                // Buscando registro correspondente mapeado pela coluna item_nome
+                const registroItem = itens.find(i => i.ronda_id === rondaIdDoDia && i.item_nome === nomeItem);
+                
+                if (registroItem && registroItem.status) {
+                    if (registroItem.status.includes("OK")) {
+                        tdDia.innerText = "✓";
+                        tdDia.className = "status-cell status-cell-ok";
+                        tdDia.title = `[Dia ${dia}] OK\nObs: ${registroItem.observacao || 'Nenhuma'}`;
+                    } else if (registroItem.status.includes("Atenção")) {
+                        tdDia.innerText = "⚠️";
+                        tdDia.className = "status-cell status-cell-warn";
+                        tdDia.title = `[Dia ${dia}] ATENÇÃO\nObs: ${registroItem.observacao || ''}`;
+                    } else if (registroItem.status.includes("Problema")) {
+                        tdDia.innerText = "✕";
+                        tdDia.className = "status-cell status-cell-crit";
+                        tdDia.title = `[Dia ${dia}] CRÍTICO\nObs: ${registroItem.observacao || ''}`;
+                    } else {
+                        tdDia.innerText = "-";
+                        tdDia.className = "status-cell-empty";
+                    }
+                } else {
+                    tdDia.innerText = "-";
+                    tdDia.className = "status-cell-empty";
+                }
+            } else {
+                tdDia.innerText = "-";
+                tdDia.className = "status-cell-empty";
+            }
+            tr.appendChild(tdDia);
+        }
         tbody.appendChild(tr);
     });
 }
 
 document.addEventListener("DOMContentLoaded", inicializarDashboard);
 </script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
