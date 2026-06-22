@@ -17,21 +17,28 @@
             --accent-green: #10b981;
             --accent-yellow: #f59e0b;
             --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
         }
 
         body {
             background: var(--bg-main);
-            color: #ffffff;
+            color: var(--text-main);
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .text-muted {
+            color: var(--text-muted) !important;
         }
 
         .card-stats {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 20px;
+            padding: 18px;
             position: relative;
             overflow: hidden;
+            height: 100%;
         }
 
         .card-stats::before {
@@ -47,11 +54,14 @@
         .stats-ok::before { background: var(--accent-green); }
         .stats-warn::before { background: var(--accent-yellow); }
         .stats-crit::before { background: var(--accent-red); }
+        .stats-kpi1::before { background: #8b5cf6; }
+        .stats-kpi2::before { background: #ec4899; }
 
         .form-select {
             background: var(--bg-card) !important;
-            color: #ffffff !important;
+            color: var(--text-main) !important;
             border: 1px solid var(--border-color) !important;
+            font-weight: 500;
         }
 
         .table-dark-custom {
@@ -62,40 +72,38 @@
         }
 
         .table-dark-custom th {
-            background: #111827;
-            color: #94a3b8;
+            background: #0f172a;
+            color: #f1f5f9;
             font-weight: 600;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 2px solid var(--border-color);
             padding: 12px 16px;
         }
 
         .table-dark-custom td {
             padding: 12px 16px;
-            border-bottom: 1px solid rgba(71, 85, 105, 0.5);
-            color: #e2e8f0;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.7);
+            color: #f8fafc;
         }
 
-        .badge-ok { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
-        .badge-warn { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
-        .badge-crit { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+        .badge-ok { background: rgba(16, 185, 129, 0.25); color: #34d399; border: 1px solid #10b981; font-weight: 600; }
+        .badge-warn { background: rgba(245, 158, 11, 0.25); color: #fbbf24; border: 1px solid #f59e0b; font-weight: 600; }
+        .badge-crit { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; font-weight: 600; }
     </style>
 </head>
 <body class="p-4">
 
 <div class="container-fluid">
-    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 class="mb-1 fw-bold">📊 Dashboard de Operações Condomínio</h3>
+            <h3 class="mb-1 fw-bold text-white">📊 Dashboard de Operações Condomínio</h3>
             <p class="text-muted small mb-0">Monitoramento analítico em tempo real do ITC</p>
         </div>
         <div>
-            <a href="index.html" class="btn btn-outline-light btn-sm me-2">⬅️ Voltar ao App</a>
-            <button class="btn btn-primary btn-sm" onclick="inicializarDashboard()">🔄 Forçar Recarga</button>
+            <a href="index.html" class="btn btn-outline-light btn-sm me-2 fw-semibold">⬅️ Voltar ao App</a>
+            <button class="btn btn-primary btn-sm fw-semibold" onclick="inicializarDashboard()">🔄 Forçar Recarga</button>
         </div>
     </div>
 
-    <!-- Filtros -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <select id="filtroTorre" class="form-select form-select-sm" onchange="filtrarDados()">
@@ -106,43 +114,55 @@
         </div>
     </div>
 
-    <!-- Cards de Indicadores -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card-stats stats-total">
-                <span class="text-muted small d-block uppercase fw-semibold">Total de Rondas</span>
-                <h2 class="fw-bold my-1" id="lblTotalRondas">0</h2>
-                <span class="text-muted small" id="lblTotalItens">0 itens verificados</span>
+                <span class="text-muted small d-block uppercase fw-bold">Total de Rondas</span>
+                <h2 class="fw-bold my-1 text-white" id="lblTotalRondas">0</h2>
+                <span class="text-muted small" id="lblTotalItens" style="color: #cbd5e1 !important;">0 itens</span>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card-stats stats-ok">
-                <span class="text-muted small d-block uppercase fw-semibold">Itens Conformes (OK)</span>
+                <span class="text-muted small d-block uppercase fw-bold">Conformes (OK)</span>
                 <h2 class="fw-bold my-1 text-success" id="lblTotalOK">0</h2>
-                <span class="text-muted small" id="lblPercOK">0% de conformidade</span>
+                <span class="fw-semibold small text-success" id="lblPercOK">0% de conf.</span>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card-stats stats-warn">
-                <span class="text-muted small d-block uppercase fw-semibold">Itens em Atenção</span>
+                <span class="text-muted small d-block uppercase fw-bold">Em Atenção</span>
                 <h2 class="fw-bold my-1 text-warning" id="lblTotalAviso">0</h2>
-                <span class="text-muted small">Requerem monitoramento</span>
+                <span class="text-muted small">Monitoramento</span>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <div class="card-stats stats-crit">
-                <span class="text-muted small d-block uppercase fw-semibold">Itens com Problema</span>
+                <span class="text-muted small d-block uppercase fw-bold">Com Problema</span>
                 <h2 class="fw-bold my-1 text-danger" id="lblTotalProblema">0</h2>
                 <span class="text-muted small">Pendências críticas</span>
             </div>
         </div>
+        <div class="col-md-2">
+            <div class="card-stats stats-kpi1">
+                <span class="text-muted small d-block uppercase fw-bold">Itens / Ronda</span>
+                <h2 class="fw-bold my-1" id="lblMediaItens" style="color: #a78bfa;">0.0</h2>
+                <span class="text-muted small">Média de amostragem</span>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card-stats stats-kpi2">
+                <span class="text-muted small d-block uppercase fw-bold">Taxa de Alerta</span>
+                <h2 class="fw-bold my-1" id="lblTaxaAlerta" style="color: #f472b6;">0%</h2>
+                <span class="text-muted small">Não conformidades</span>
+            </div>
+        </div>
     </div>
 
-    <!-- Seção Gráficos e Tabelas -->
     <div class="row g-4">
         <div class="col-md-4">
-            <div class="card bg-dark border-secondary p-3 h-100">
-                <h6 class="fw-bold mb-3">Distribuicão de Status</h6>
+            <div class="card border-secondary p-3 h-100" style="background: var(--bg-card);">
+                <h6 class="fw-bold mb-3 text-white">📊 Comparativo Proporcional de Status</h6>
                 <div style="position: relative; height:220px;">
                     <canvas id="chartStatus"></canvas>
                 </div>
@@ -150,16 +170,16 @@
         </div>
         <div class="col-md-8">
             <div class="table-dark-custom h-100">
-                <div class="p-3 bg-dark border-bottom border-secondary">
-                    <h6 class="fw-bold mb-0">📋 Últimos Eventos e Ocorrências Registradas</h6>
+                <div class="p-3 border-bottom border-secondary" style="background: #111827;">
+                    <h6 class="fw-bold mb-0 text-white">📋 Histórico Cronológico por Categoria</h6>
                 </div>
                 <div class="table-responsive" style="max-height: 250px;">
-                    <table class="table table-dark table-hover mb-0 alignment-middle">
+                    <table class="table table-dark table-hover mb-0 align-middle">
                         <thead>
                             <tr>
                                 <th>Data/Hora</th>
                                 <th>Torre</th>
-                                <th>Item verificado</th>
+                                <th>Categoria / Item</th>
                                 <th>Status</th>
                                 <th>Observação</th>
                             </tr>
@@ -177,7 +197,6 @@
 </div>
 
 <script>
-// Credenciais do seu Supabase
 const SUPABASE_URL = "https://orhudsajuoknkfcqhgah.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yaHVkc2FqdW9rbmtmY3FoZ2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MjU0NTYsImV4cCI6MjA5NDIwMTQ1Nn0.85p-inG7Y2c_vf8tupyA4s3suv1Ba_s1GJ_2EDdP4YQ";
 
@@ -189,14 +208,12 @@ let chartStatusObj = null;
 
 async function inicializarDashboard() {
     try {
-        // 1. Busca dados da tabela pai (rondas)
         const { data: rondas, error: errRondas } = await supabaseClient
             .from('rondas')
             .select('*');
             
         if (errRondas) throw errRondas;
 
-        // 2. Busca dados da tabela filha (ronda_itens)
         const { data: itens, error: errItens } = await supabaseClient
             .from('ronda_itens')
             .select('*');
@@ -215,19 +232,14 @@ async function inicializarDashboard() {
 function filtrarDados() {
     const torreSelecionada = document.getElementById("filtroTorre").value;
 
-    // Filtra as rondas baseadas na torre selecionada
     let rondasFiltradas = dadosGlobaisrondas;
     if (torreSelecionada !== "Todos") {
         rondasFiltradas = dadosGlobaisrondas.filter(r => r.torre === torreSelecionada);
     }
 
-    // Pega as IDs das rondas que passaram pelo filtro
     const idsRondasFiltradas = rondasFiltradas.map(r => r.id);
-
-    // Filtra os itens associados a essas rondas
     let itensFiltrados = dadosGlobaisItens.filter(item => idsRondasFiltradas.includes(item.ronda_id));
 
-    // Cálculos dos contadores
     const totalRondas = rondasFiltradas.length;
     const totalItens = itensFiltrados.length;
 
@@ -236,16 +248,21 @@ function filtrarDados() {
     const totalProblema = itensFiltrados.filter(i => i.status && i.status.includes("Problema")).length;
 
     const porcConformidade = totalItens > 0 ? Math.round((totalOK / totalItens) * 100) : 0;
+    
+    // Cálculos dos novos KPIs
+    const mediaItens = totalRondas > 0 ? (totalItens / totalRondas).toFixed(1) : "0.0";
+    const taxaAlerta = totalItens > 0 ? Math.round(((totalAviso + totalProblema) / totalItens) * 100) : 0;
 
     // Atualiza os indicadores na tela
     document.getElementById("lblTotalRondas").innerText = totalRondas;
-    document.getElementById("lblTotalItens").innerText = `${totalItens} itens verificados`;
+    document.getElementById("lblTotalItens").innerText = `${totalItens} itens`;
     document.getElementById("lblTotalOK").innerText = totalOK;
-    document.getElementById("lblPercOK").innerText = `${porcConformidade}% de conformidade`;
+    document.getElementById("lblPercOK").innerText = `${porcConformidade}% conformidade`;
     document.getElementById("lblTotalAviso").innerText = totalAviso;
     document.getElementById("lblTotalProblema").innerText = totalProblema;
+    document.getElementById("lblMediaItens").innerText = mediaItens;
+    document.getElementById("lblTaxaAlerta").innerText = `${taxaAlerta}%`;
 
-    // Atualiza Gráficos e Tabela de ocorrências
     renderizarGrafico(totalOK, totalAviso, totalProblema);
     renderizarTabela(rondasFiltradas, itensFiltrados);
 }
@@ -257,25 +274,27 @@ function renderizarGrafico(ok, aviso, problema) {
         chartStatusObj.destroy();
     }
 
-    if(ok === 0 && aviso === 0 && problema === 0) {
-        ok = 1; // Coloca um dado fictício cinza se estiver tudo zerado
-    }
-
+    // Mudança para gráfico de barras empilhadas horizontais (melhor legibilidade que pizza)
     chartStatusObj = new Chart(ctx, {
-        type: 'doughnut',
+        type: 'bar',
         data: {
-            labels: ['OK', 'Atenção', 'Problema'],
-            datasets: [{
-                data: [ok, aviso, problema],
-                backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-                borderWidth: 0
-            }]
+            labels: ['Status dos Itens'],
+            datasets: [
+                { label: 'OK', data: [ok], backgroundColor: '#10b981' },
+                { label: 'Atenção', data: [aviso], backgroundColor: '#f59e0b' },
+                { label: 'Problema', data: [problema], backgroundColor: '#ef4444' }
+            ]
         },
         options: {
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'bottom', labels: { color: '#fff' } }
+                legend: { position: 'bottom', labels: { color: '#f8fafc' } }
+            },
+            scales: {
+                x: { stacked: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                y: { stacked: true, grid: { display: false }, ticks: { color: '#f8fafc' } }
             }
         }
     });
@@ -285,12 +304,23 @@ function renderizarTabela(rondas, itens) {
     const tbody = document.getElementById("tabelaOcorrencias");
     tbody.innerHTML = "";
 
-    // Mapeia as rondas para busca rápida por ID
     const mapaRondas = {};
     rondas.forEach(r => { mapaRondas[r.id] = r; });
 
-    // Ordena os itens para mostrar as falhas/problemas primeiro
-    const itensOrdenados = [...itens].sort((a,b) => {
+    // Correção Crítica de Ordenação: Organiza primariamente por Data decrescente (Mais atuais primeiro)
+    const itensOrdenados = [...itens].sort((a, b) => {
+        const rA = mapaRondas[a.ronda_id];
+        const rB = mapaRondas[b.ronda_id];
+        
+        if (!rA || !rB) return 0;
+        
+        // Compara as datas das rondas para garantir a cronologia correta
+        const dataA = new Date(rA.data_ronda.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1"));
+        const dataB = new Date(rB.data_ronda.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$2-$1"));
+        
+        if (dataB - dataA !== 0) return dataB - dataA;
+        
+        // Se empatar na data, joga os problemas para cima
         if (a.status.includes("Problema") && !b.status.includes("Problema")) return -1;
         if (!a.status.includes("Problema") && b.status.includes("Problema")) return 1;
         return 0;
@@ -303,7 +333,7 @@ function renderizarTabela(rondas, itens) {
 
     itensOrdenados.forEach(item => {
         const rondaPai = mapaRondas[item.ronda_id];
-        if (!rondaPai) return; // ignora se a ronda pai não bateu no filtro de torre
+        if (!rondaPai) return;
 
         let badgeClass = "badge-ok";
         if (item.status.includes("Atenção")) badgeClass = "badge-warn";
@@ -311,17 +341,16 @@ function renderizarTabela(rondas, itens) {
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td><small>${rondaPai.data_ronda || ''}</small></td>
-            <td><span class="badge bg-secondary">${rondaPai.torre}</span></td>
-            <td class="fw-semibold">${item.item}</td>
+            <td><strong class="text-white">${rondaPai.data_ronda || ''}</strong></td>
+            <td><span class="badge bg-secondary fw-semibold">${rondaPai.torre}</span></td>
+            <td><span class="text-info font-monospace small">[${item.categoria || 'Geral'}]</span> <span class="fw-semibold">${item.item}</span></td>
             <td><span class="badge ${badgeClass}">${item.status}</span></td>
-            <td class="text-truncate" style="max-width: 250px;" title="${item.observacao}">${item.observacao || ''}</td>
+            <td class="text-truncate text-white-50" style="max-width: 250px;" title="${item.observacao}">${item.observacao || ''}</td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-// Inicia a carga quando o documento estiver pronto
 document.addEventListener("DOMContentLoaded", inicializarDashboard);
 </script>
 </body>
